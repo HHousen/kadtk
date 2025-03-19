@@ -25,13 +25,13 @@ class ModelLoader(ABC):
     """
     Abstract class for loading a model and getting embeddings from it. The model should be loaded in the `load_model` method.
     """
-    def __init__(self, name: str, num_features: int, sr: int, audio_len: Optional[Union[float, int]] = None):
+    def __init__(self, name: str, num_features: int, sr: int, audio_len: Optional[Union[float, int]] = None, device: str = 'cuda'):
         self.audio_len = audio_len
         self.model = None
         self.sr = sr
         self.num_features = num_features
         self.name = name
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.device = torch.device(device)
 
     @torch.no_grad()
     def get_embedding(self, audio: np.ndarray):
@@ -390,8 +390,8 @@ class CLAPLaionModel(ModelLoader):
     CLAP model from https://github.com/LAION-AI/CLAP
     """
     
-    def __init__(self, type: Literal['audio', 'music'], audio_len: Optional[Union[float, int]] = None):
-        super().__init__(f"clap-laion-{type}", 512, 48000, audio_len=audio_len)
+    def __init__(self, type: Literal['audio', 'music'], audio_len: Optional[Union[float, int]] = None, device: str = 'cuda'):
+        super().__init__(f"clap-laion-{type}", 512, 48000, audio_len=audio_len, device=device)
         self.type = type
 
         if type == 'audio':

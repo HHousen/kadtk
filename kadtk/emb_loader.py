@@ -11,7 +11,7 @@ import torch
 import torchaudio
 from hypy_utils.tqdm_utils import tmap, tq
 
-from kadtk.model_loader import ModelLoader
+from kadtk.model_loader import CLAPLaionModel, ModelLoader
 from kadtk.utils import find_sox_formats, get_cache_embedding_path
 
 sox_path = os.environ.get('SOX_PATH', 'sox')
@@ -188,6 +188,17 @@ def cache_embedding_files(files: Union[list[Path], str, Path], ml: ModelLoader, 
     
     # Cache embeddings in parallel
     multiprocessing.set_start_method('spawn', force=True)
+    def _cache_embedding_batch_with_gpu(args):
+        fs, worker_id, kwargs = args
+        device = f"cuda:{worker_id % 8}"
+        ml = CLAPLaionModel('music', audio_len=None, device=device)
+        print(f"Worker {worker_id} using {device}")
+        emb_loader = EmbeddingLoader(ml, **kwargs)
+        for f in fs:
+            print(f"Loading {f} using {ml.name} on {device}")
+            emb_loader.cache_embedding_file(f)
+
     with torch.multiprocessing.Pool(workers) as pool:
-        pool.map(_cache_embedding_batch, [(b, ml, kwargs) for b in batches])
+        args = [(b, i, kwargs) for i, b in enumerate(batches)]
+        pool.map(_cache_embedding_batch_with_gpu, args)
         
