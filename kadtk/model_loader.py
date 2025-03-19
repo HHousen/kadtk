@@ -36,7 +36,7 @@ class ModelLoader(ABC):
     @torch.no_grad()
     def get_embedding(self, audio: np.ndarray):
         embd = self._get_embedding(audio)
-        if self.device == torch.device('cuda'):
+        if str(self.device).startswith("cuda"):
             embd = embd.cpu()
         embd = embd.detach().numpy()
         if not embd.shape[-1] == self.num_features:
