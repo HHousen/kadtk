@@ -151,6 +151,15 @@ def _cache_embedding_batch(args):
         print(f"Loading {f} using {ml.name}")
         emb_loader.cache_embedding_file(f)
 
+def _cache_embedding_batch_with_gpu(args):
+        fs, worker_id, kwargs = args
+        device = f"cuda:{worker_id % 8}"
+        ml = CLAPLaionModel('music', audio_len=None, device=device)
+        print(f"Worker {worker_id} using {device}")
+        emb_loader = EmbeddingLoader(ml, **kwargs)
+        for f in fs:
+            print(f"Loading {f} using {ml.name} on {device}")
+            emb_loader.cache_embedding_file(f)
 
 def cache_embedding_files(files: Union[list[Path], str, Path], ml: ModelLoader, workers: int = 8, 
                           force_emb_encode: bool = False, **kwargs):
@@ -188,15 +197,6 @@ def cache_embedding_files(files: Union[list[Path], str, Path], ml: ModelLoader, 
     
     # Cache embeddings in parallel
     multiprocessing.set_start_method('spawn', force=True)
-    def _cache_embedding_batch_with_gpu(args):
-        fs, worker_id, kwargs = args
-        device = f"cuda:{worker_id % 8}"
-        ml = CLAPLaionModel('music', audio_len=None, device=device)
-        print(f"Worker {worker_id} using {device}")
-        emb_loader = EmbeddingLoader(ml, **kwargs)
-        for f in fs:
-            print(f"Loading {f} using {ml.name} on {device}")
-            emb_loader.cache_embedding_file(f)
 
     with torch.multiprocessing.Pool(workers) as pool:
         args = [(b, i, kwargs) for i, b in enumerate(batches)]
